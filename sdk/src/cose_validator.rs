@@ -30,8 +30,6 @@ use x509_parser::{
 
 #[cfg(feature = "openssl")]
 use crate::openssl::verify_trust;
-#[cfg(not(target_arch = "wasm32"))]
-use crate::validator::{get_validator, CoseValidator};
 use crate::{
     asn1::rfc3161::TstInfo,
     error::{Error, Result},
@@ -41,7 +39,7 @@ use crate::{
     time_stamp::gt_to_datetime,
     trust_handler::{has_allowed_oid, TrustHandlerConfig},
     validation_status,
-    validator::ValidationInfo,
+    validator::{get_validator, CoseValidator, ValidationInfo},
     SigningAlg,
 };
 #[cfg(target_arch = "wasm32")]
@@ -1098,7 +1096,6 @@ pub(crate) fn get_signing_info(
 /// data:  data that was used to create the cose_bytes, these must match
 /// addition_data: additional optional data that may have been used during signing
 /// returns - Ok on success
-#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn verify_cose(
     cose_bytes: &[u8],
     data: &[u8],
@@ -1211,19 +1208,6 @@ pub(crate) fn verify_cose(
     Ok(result)
 }
 
-#[cfg(target_arch = "wasm32")]
-pub(crate) fn verify_cose(
-    _cose_bytes: &[u8],
-    _data: &[u8],
-    _additional_data: &[u8],
-    _signature_only: bool,
-    _th: &dyn TrustHandlerConfig,
-    _validation_log: &mut impl StatusTracker,
-) -> Result<ValidationInfo> {
-    Err(Error::CoseVerifier)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 fn validate_with_cert(
     validator: Box<dyn CoseValidator>,
     sig: &[u8],

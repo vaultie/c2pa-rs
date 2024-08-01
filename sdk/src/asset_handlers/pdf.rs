@@ -71,9 +71,6 @@ pub(crate) trait C2paPdf: Sized {
     /// Returns `true` if the `PDF` is password protected, `false` otherwise.
     fn is_password_protected(&self) -> bool;
 
-    /// Returns `true` if this PDF has C2PA Manifests, `false` otherwise.
-    fn has_c2pa_manifest(&self) -> bool;
-
     /// Writes provided `bytes` as a PDF `Embedded File`
     fn write_manifest_as_embedded_file(&mut self, bytes: Vec<u8>) -> Result<(), Error>;
 
@@ -81,8 +78,8 @@ pub(crate) trait C2paPdf: Sized {
     fn write_manifest_as_annotation(&mut self, vec: Vec<u8>) -> Result<(), Error>;
 
     /// Returns a reference to the C2PA manifest bytes.
-    #[allow(clippy::needless_lifetimes)] // required for automock::mockall
-    fn read_manifest_bytes<'a>(&'a self) -> Result<Option<Vec<&'a [u8]>>, Error>;
+    #[allow(clippy::needless_lifetimes, clippy::type_complexity)] // required for automock::mockall
+    fn read_manifest_bytes<'a>(&'a self) -> Result<Option<Vec<(&'a [u8], usize)>>, Error>;
 
     fn remove_manifest_bytes(&mut self) -> Result<(), Error>;
 
@@ -101,14 +98,6 @@ impl C2paPdf for Pdf {
 
     fn is_password_protected(&self) -> bool {
         self.document.is_encrypted()
-    }
-
-    /// Determines if this PDF has a C2PA manifest embedded.
-    ///
-    /// This is done by checking if the Associated File key of the catalog points to a
-    /// [Object::Dictionary] with an `AFRelationship` set to `C2PA_Manifest`.
-    fn has_c2pa_manifest(&self) -> bool {
-        self.c2pa_file_spec_object_id().is_some()
     }
 
     /// Writes the provided `bytes` to the PDF as an `EmbeddedFile`.
@@ -206,15 +195,18 @@ impl C2paPdf for Pdf {
     /// This method will read the bytes of the manifest, whether the manifest was added to the
     /// PDF via an `Annotation` or an `EmbeddedFile`.
     ///
-    /// Returns an `Ok(None)` if no manifest is present. Returns a `Ok(Some(Vec<&[u8]>))` when a manifest
-    /// is present.
+    /// Returns an `Ok(None)` if no manifest is present. Returns a `Ok(Some(Vec<(&[u8], usize)>))` when a manifest
+    /// is present and the byte start position is present.
     ///
     /// ### Note:
     ///
-    /// A `Vec<&[u8]>` is returned because it's possible for a PDF's manifests to be stored
+    /// A `Vec<(&[u8], usize)>` is returned because it's possible for a PDF's manifests to be stored
     /// separately, due to PDF's "Incremental Update" feature. See the spec for more details:
     /// <https://c2pa.org/specifications/specifications/1.3/specs/C2PA_Specification.html#_embedding_manifests_into_pdfs>
-    fn read_manifest_bytes(&self) -> Result<Option<Vec<&[u8]>>, Error> {
+    ///
+    /// An `Ok(None)` value may be returned if the start position is not present. This situation
+    /// can occur when adding a manifest in-memory.
+    fn read_manifest_bytes(&self) -> Result<Option<Vec<(&[u8], usize)>>, Error> {
         let Some(id) = self.c2pa_file_spec_object_id() else {
             return Ok(None);
         };
@@ -226,18 +218,14 @@ impl C2paPdf for Pdf {
             .get_deref(b"EF", &self.document)?
             .as_dict()?; // EF dictionary
 
-        Ok(Some(vec![
-            &ef.get_deref(b"F", &self.document)? // F embedded file stream
-                .as_stream()?
-                .content,
-        ]))
+        Ok(ef
+            .get_deref(b"F", &self.document)? // F embedded file stream
+            .as_stream()
+            .ok()
+            .and_then(|stream| Some(vec![(&*stream.content, stream.start_position?)])))
     }
 
     fn remove_manifest_bytes(&mut self) -> Result<(), Error> {
-        if !self.has_c2pa_manifest() {
-            return Err(Error::NoManifest);
-        }
-
         // Find the File Spec, which contains the reference to the manifest.
         let file_spec_ref = self
             .c2pa_file_spec_object_id()
@@ -537,6 +525,24 @@ impl Pdf {
         names_vector.drain(content_creds_marker_idx..=content_creds_reference_idx);
 
         Ok(())
+    }
+
+    fn manifest_stream(&self) -> Result<Option<&Stream>, Error> {
+        let Some(id) = self.c2pa_file_spec_object_id() else {
+            return Ok(None);
+        };
+
+        let ef = &self
+            .document
+            .get_object(id)
+            .and_then(Object::as_dict)?
+            .get_deref(b"EF", &self.document)?
+            .as_dict()?; // EF dictionary
+
+        Ok(Some(
+            ef.get_deref(b"F", &self.document)? // F embedded file stream
+                .as_stream()?,
+        ))
     }
 }
 

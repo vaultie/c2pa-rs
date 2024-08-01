@@ -15,9 +15,12 @@ use std::{fs::File, path::Path};
 
 use crate::{
     asset_handlers::pdf::{C2paPdf, Pdf},
-    asset_io::{AssetIO, CAIRead, CAIReader, CAIWriter, ComposedManifestRef, HashObjectPositions},
-    Error,
-    Error::{JumbfNotFound, NotImplemented, PdfReadError},
+    asset_io::{
+        AssetIO, CAIRead, CAIReadWrite, CAIReader, CAIWriter, ComposedManifestRef,
+        HashObjectPositions,
+    },
+    utils::patch::patch_bytes,
+    Error::{self, JumbfNotFound, NotImplemented, PdfReadError},
 };
 
 static SUPPORTED_TYPES: [&str; 2] = ["pdf", "application/pdf"];
@@ -45,6 +48,117 @@ impl CAIReader for PdfIO {
     }
 }
 
+impl CAIWriter for PdfIO {
+    fn write_cai(
+        &self,
+        input_stream: &mut dyn CAIRead,
+        output_stream: &mut dyn CAIReadWrite,
+        store_bytes: &[u8],
+    ) -> crate::Result<()> {
+        input_stream.rewind()?;
+        let mut pdf_bytes = Vec::new();
+        input_stream.read_to_end(&mut pdf_bytes)?;
+
+        let mut pdf =
+            Pdf::from_bytes(&pdf_bytes).map_err(|e| Error::InvalidAsset(e.to_string()))?;
+
+        if let Some(manifests) = pdf
+            .read_manifest_bytes()
+            .map_err(|e| Error::InvalidAsset(e.to_string()))?
+        {
+            let (current_manifest, _) = manifests.first().ok_or(Error::JumbfNotFound)?;
+            patch_bytes(&mut pdf_bytes, current_manifest, store_bytes)?;
+            output_stream.rewind()?;
+            output_stream.write_all(&pdf_bytes)?;
+        } else {
+            pdf.write_manifest_as_embedded_file(store_bytes.to_vec())
+                .map_err(|e| Error::InvalidAsset(e.to_string()))?;
+
+            let mut out_buf = Vec::new();
+            pdf.save_to(&mut out_buf)?;
+
+            output_stream.rewind()?;
+            output_stream.write_all(&out_buf)?;
+        }
+
+        Ok(())
+    }
+
+    fn get_object_locations_from_stream(
+        &self,
+        input_stream: &mut dyn CAIRead,
+    ) -> crate::Result<Vec<HashObjectPositions>> {
+        input_stream.rewind()?;
+        let mut pdf =
+            Pdf::from_reader(input_stream).map_err(|e| Error::InvalidAsset(e.to_string()))?;
+
+        if let Some(manifests) = pdf
+            .read_manifest_bytes()
+            .map_err(|e| Error::InvalidAsset(e.to_string()))?
+        {
+            let (current_manifest, offset) = manifests.first().ok_or(Error::JumbfNotFound)?;
+
+            Ok(vec![HashObjectPositions {
+                offset: *offset,
+                length: current_manifest.len(),
+                htype: crate::asset_io::HashBlockObjectType::Cai,
+            }])
+        } else {
+            // Write a single byte as a placeholder manifest.
+            pdf.write_manifest_as_embedded_file(vec![0])
+                .map_err(|e| Error::InvalidAsset(e.to_string()))?;
+
+            let mut out = Vec::new();
+            pdf.save_to(&mut out)?;
+
+            let pdf = Pdf::from_bytes(&out).map_err(|e| Error::InvalidAsset(e.to_string()))?;
+
+            let manifests = pdf
+                .read_manifest_bytes()
+                .map_err(|e| Error::InvalidAsset(e.to_string()))?
+                .ok_or(Error::JumbfNotFound)?;
+
+            let (current_manifest, offset) = manifests.first().ok_or(Error::JumbfNotFound)?;
+
+            Ok(vec![HashObjectPositions {
+                offset: *offset,
+                length: current_manifest.len(),
+                htype: crate::asset_io::HashBlockObjectType::Cai,
+            }])
+        }
+    }
+
+    fn remove_cai_store_from_stream(
+        &self,
+        mut input_stream: &mut dyn CAIRead,
+        output_stream: &mut dyn CAIReadWrite,
+    ) -> crate::Result<()> {
+        input_stream.rewind()?;
+        let mut pdf =
+            Pdf::from_reader(&mut input_stream).map_err(|e| Error::InvalidAsset(e.to_string()))?;
+
+        if pdf
+            .read_manifest_bytes()
+            .map_err(|e| Error::InvalidAsset(e.to_string()))?
+            .is_some()
+        {
+            pdf.remove_manifest_bytes()
+                .map_err(|e| Error::InvalidAsset(e.to_string()))?;
+
+            let mut out_buf = Vec::new();
+            pdf.save_to(&mut out_buf)?;
+
+            output_stream.rewind()?;
+            output_stream.write_all(&out_buf)?;
+        } else {
+            input_stream.rewind()?;
+            std::io::copy(input_stream, output_stream)?;
+        }
+
+        Ok(())
+    }
+}
+
 impl PdfIO {
     fn read_manifest_bytes(&self, pdf: impl C2paPdf) -> crate::Result<Vec<u8>> {
         let Ok(result) = pdf.read_manifest_bytes() else {
@@ -56,7 +170,7 @@ impl PdfIO {
         };
 
         match bytes.as_slice() {
-            [bytes] => Ok(bytes.to_vec()),
+            [(bytes, _)] => Ok(bytes.to_vec()),
             _ => Err(NotImplemented(
                 "c2pa-rs only supports reading PDFs with one manifest".into(),
             )),
@@ -85,7 +199,7 @@ impl AssetIO for PdfIO {
     }
 
     fn get_writer(&self, _asset_type: &str) -> Option<Box<dyn CAIWriter>> {
-        None
+        Some(Box::new(PdfIO {}))
     }
 
     fn read_cai_store(&self, asset_path: &Path) -> crate::Result<Vec<u8>> {

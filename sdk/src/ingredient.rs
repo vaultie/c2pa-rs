@@ -1537,11 +1537,6 @@ mod tests {
         assert_eq!(ingredient.format(), format);
         assert!(ingredient.manifest_data().is_some());
         assert!(ingredient.metadata().is_none());
-        #[cfg(target_arch = "wasm32")]
-        web_sys::console::debug_2(
-            &"ingredient_from_memory_async:".into(),
-            &ingredient.to_string().into(),
-        );
         assert!(ingredient.validation_status().is_none());
     }
 
@@ -1641,11 +1636,6 @@ mod tests {
         )
         .await
         .unwrap();
-        #[cfg(target_arch = "wasm32")]
-        web_sys::console::debug_2(
-            &"ingredient_from_memory_async:".into(),
-            &ingredient.to_string().into(),
-        );
         assert!(ingredient.validation_status().is_none());
         assert!(ingredient.manifest_data().is_some());
         assert!(ingredient.provenance().is_some());

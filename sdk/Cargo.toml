@@ -28,15 +28,22 @@ rustdoc-args = ["--cfg", "docsrs"]
 default = ["v1_api"]
 add_thumbnails = ["image"]
 psxxx_ocsp_stapling_experimental = []
-file_io = ["openssl_sign"]
+file_io = ["openssl_sign", "dep:treeline"]
 serialize_thumbnails = []
 no_interleaved_io = ["file_io"]
 fetch_remote_manifests = []
 openssl_sign = ["openssl"]
 json_schema = ["dep:schemars"]
-pdf = ["dep:lopdf"]
-v1_api = []
+v1_api = ["dep:treeline"]
 unstable_api = []
+
+# File formats
+jpeg = ["dep:img-parts", "dep:jfifdump"]
+mp3 = ["dep:id3"]
+pdf = ["dep:lopdf"]
+png = ["dep:img-parts", "dep:png_pong"]
+riff = ["dep:riff"]
+tiff = ["dep:byteordered"]
 
 # The diagnostics feature is unsupported and might be removed.
 # It enables some low-overhead timing features used in our development cycle.
@@ -71,7 +78,7 @@ base64 = "0.21.2"
 bcder = "0.7.1"
 bytes = "1.4.0"
 byteorder = { version = "1.4.3", default-features = false }
-byteordered = "0.6.0"
+byteordered = { version = "0.6.0", optional = true }
 chrono = { version = "0.4.27", default-features = false, features = [
 	"serde",
 	"wasmbind",
@@ -90,9 +97,9 @@ extfmt = "0.1.1"
 fast-xml = "0.23.1"
 hex = "0.4.3"
 # Version 1.13.0 doesn't compile under Rust < 1.75, pinning to 1.12.0
-id3 = "=1.12.0"
-img-parts = "0.3.0"
-jfifdump = "0.5.1"
+id3 = { version = "=1.12.0", optional = true }
+img-parts = { version = "0.3.0", optional = true }
+jfifdump = { version = "0.5.1", optional = true }
 log = "0.4.8"
 lopdf = { git = "https://github.com/vaultie/lopdf", default-features = false, features = ["chrono_time", "pom_parser", "rayon"], optional = true }
 lazy_static = "1.4.0"
@@ -101,14 +108,14 @@ multibase = "0.9.0"
 multihash = "0.11.4"
 mp4 = "0.13.0"
 pem = "3.0.2"
-png_pong = "0.9.1"
+png_pong = { version = "0.9.1", optional = true }
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 range-set = "0.0.11"
 rasn-ocsp = "0.12.5"
 rasn-pkix = "0.12.5"
 rasn = "0.12.5"
-riff = "1.0.1"
+riff = { version = "1.0.1", optional = true }
 schemars = { version = "0.8.21", optional = true }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_bytes = "0.11.5"
@@ -120,7 +127,7 @@ serde-transcode = "1.1.1"
 sha2 = "0.10.2"
 tempfile = "3.10.1"
 thiserror = "1.0.61"
-treeline = "0.1.0"
+treeline = { version = "0.1.0", optional = true }
 url = "2.2.2, <2.5.1"                                               # Can't use 2.5.1 or newer until new license is reviewed.
 uuid = { version = "1.7.0", features = ["serde", "v4", "js"] }
 x509-parser = "0.15.1"
@@ -137,7 +144,6 @@ instant = "0.1.12"
 openssl = { version = "0.10.61", features = ["vendored"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-console_log = { version = "1.0.0", features = ["color"] }
 ed25519-dalek = "2.1.1"
 getrandom = { version = "0.2.7", features = ["js"] }
 # We need to use the `inaccurate` flag here to ensure usage of the JavaScript Date API

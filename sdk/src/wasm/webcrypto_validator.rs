@@ -132,7 +132,6 @@ async fn crypto_is_verified(
         .map_err(|_err| Error::WasmVerifier)?
         .into();
     let result = verified.is_truthy();
-    web_sys::console::debug_2(&"verified".into(), &result.into());
     Ok(result)
 }
 
@@ -181,10 +180,6 @@ fn ed25519_validate(sig: Vec<u8>, data: Vec<u8>, pkey: Vec<u8>) -> Result<bool> 
             Err(_) => Ok(false),
         }
     } else {
-        web_sys::console::debug_2(
-            &"Ed25519 public key incorrect length: ".into(),
-            &pkey.len().to_string().into(),
-        );
         Err(Error::CoseInvalidCert)
     }
 }
@@ -218,7 +213,6 @@ pub(crate) async fn async_validate(
                 .await
                 .map_err(|_err| Error::WasmKey)?
                 .into();
-            web_sys::console::debug_2(&"CryptoKey".into(), &crypto_key);
 
             // Create verifier
             crypto_is_verified(
@@ -248,13 +242,7 @@ pub(crate) async fn async_validate(
 
             match result {
                 Ok(()) => Ok(true),
-                Err(err) => {
-                    web_sys::console::debug_2(
-                        &"RSA-PSS validation failed:".into(),
-                        &err.to_string().into(),
-                    );
-                    Ok(false)
-                }
+                Err(err) => Ok(false),
             }
         }
         "ECDSA" => {
@@ -277,7 +265,6 @@ pub(crate) async fn async_validate(
                 .await
                 .map_err(|_| Error::CoseInvalidCert)?
                 .into();
-            web_sys::console::debug_2(&"CryptoKey".into(), &crypto_key);
 
             // Create verifier
             algorithm = EcdsaParams::new(&algo, &hash).as_js_object();
@@ -320,8 +307,6 @@ pub(crate) async fn async_validate(
 
 // This interface is called from CoseValidator. RSA validation not supported here.
 pub async fn validate_async(alg: SigningAlg, sig: &[u8], data: &[u8], pkey: &[u8]) -> Result<bool> {
-    web_sys::console::debug_2(&"Validating with algorithm".into(), &alg.to_string().into());
-
     match alg {
         SigningAlg::Ps256 => {
             async_validate(

@@ -14,11 +14,16 @@
 pub mod bmff_io;
 pub mod c2pa_io;
 pub mod gif_io;
+#[cfg(feature = "jpeg")]
 pub mod jpeg_io;
+#[cfg(feature = "mp3")]
 pub mod mp3_io;
+#[cfg(feature = "png")]
 pub mod png_io;
+#[cfg(feature = "riff")]
 pub mod riff_io;
 pub mod svg_io;
+#[cfg(feature = "tiff")]
 pub mod tiff_io;
 
 #[cfg(feature = "pdf")]

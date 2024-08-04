@@ -23,13 +23,20 @@ use std::{
 
 use lazy_static::lazy_static;
 
+#[cfg(feature = "jpeg")]
+use crate::asset_handlers::jpeg_io::JpegIO;
+#[cfg(feature = "mp3")]
+use crate::asset_handlers::mp3_io::Mp3IO;
+#[cfg(feature = "png")]
+use crate::asset_handlers::png_io::PngIO;
+#[cfg(feature = "riff")]
+use crate::asset_handlers::riff_io::RiffIO;
+#[cfg(feature = "tiff")]
+use crate::asset_handlers::tiff_io::TiffIO;
 #[cfg(feature = "pdf")]
 use crate::asset_handlers::pdf_io::PdfIO;
 use crate::{
-    asset_handlers::{
-        bmff_io::BmffIO, c2pa_io::C2paIO, gif_io::GifIO, jpeg_io::JpegIO, mp3_io::Mp3IO,
-        png_io::PngIO, riff_io::RiffIO, svg_io::SvgIO, tiff_io::TiffIO,
-    },
+    asset_handlers::{bmff_io::BmffIO, c2pa_io::C2paIO, gif_io::GifIO, svg_io::SvgIO},
     asset_io::{AssetIO, CAIRead, CAIReadWrite, CAIReader, CAIWriter, HashObjectPositions},
     error::{Error, Result},
 };
@@ -42,11 +49,16 @@ lazy_static! {
             Box::new(PdfIO::new("")),
             Box::new(BmffIO::new("")),
             Box::new(C2paIO::new("")),
+            #[cfg(feature = "jpeg")]
             Box::new(JpegIO::new("")),
+            #[cfg(feature = "png")]
             Box::new(PngIO::new("")),
+            #[cfg(feature = "riff")]
             Box::new(RiffIO::new("")),
             Box::new(SvgIO::new("")),
+            #[cfg(feature = "tiff")]
             Box::new(TiffIO::new("")),
+            #[cfg(feature = "mp3")]
             Box::new(Mp3IO::new("")),
             Box::new(GifIO::new("")),
         ];
@@ -73,11 +85,16 @@ lazy_static! {
             Box::new(PdfIO::new("")),
             Box::new(BmffIO::new("")),
             Box::new(C2paIO::new("")),
+            #[cfg(feature = "jpeg")]
             Box::new(JpegIO::new("")),
+            #[cfg(feature = "png")]
             Box::new(PngIO::new("")),
+            #[cfg(feature = "riff")]
             Box::new(RiffIO::new("")),
             Box::new(SvgIO::new("")),
+            #[cfg(feature = "tiff")]
             Box::new(TiffIO::new("")),
+            #[cfg(feature = "mp3")]
             Box::new(Mp3IO::new("")),
             Box::new(GifIO::new("")),
         ];

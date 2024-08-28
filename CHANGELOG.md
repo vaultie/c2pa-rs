@@ -6,6 +6,43 @@ This project adheres to [Semantic Versioning](https://semver.org), except that â
 
 Do not manually edit this file. It will be automatically updated when a new release is published.
 
+## 0.33.3
+_17 August 2024_
+
+* Inline certs for wasm test signer ([#564](https://github.com/contentauth/c2pa-rs/pull/564))
+
+## 0.33.2
+_15 August 2024_
+
+* Bmff write fix ([#552](https://github.com/contentauth/c2pa-rs/pull/552))
+* Fix remote embedding RIFF when specifying mime type ([#551](https://github.com/contentauth/c2pa-rs/pull/551))
+* Fix data hash out of bounds when using placeholder beyond stream length ([#546](https://github.com/contentauth/c2pa-rs/pull/546))
+* Adds embeddable apis and remote_url/no_embed options ([#537](https://github.com/contentauth/c2pa-rs/pull/537))
+* export_schema: add unstable_api feature ([#542](https://github.com/contentauth/c2pa-rs/pull/542))
+* Ingredient checks ([#529](https://github.com/contentauth/c2pa-rs/pull/529))
+* Add base_path field to Builder ([#539](https://github.com/contentauth/c2pa-rs/pull/539))
+* Export `AssertionDefinition` and `ActionTemplate` in public API ([#522](https://github.com/contentauth/c2pa-rs/pull/522))
+
+## 0.33.1
+_30 July 2024_
+
+* Use timestamp with OpenSSL validation to prevent check chain check erâ€¦ ([#531](https://github.com/contentauth/c2pa-rs/pull/531))
+* Fix GIF `remove_cai_store_from_stream` behavior ([#524](https://github.com/contentauth/c2pa-rs/pull/524))
+
+## 0.33.0
+_26 July 2024_
+
+* Update crate to fix bad certificate dump content ([#525](https://github.com/contentauth/c2pa-rs/pull/525))
+* Introduce a mutex around the FFI calls to OpenSSL ([#516](https://github.com/contentauth/c2pa-rs/pull/516))
+* Bump bcder minimum version to 0.7.3 ([#526](https://github.com/contentauth/c2pa-rs/pull/526))
+* (MINOR) Updates needed for v2 JavaScript SDK ([#521](https://github.com/contentauth/c2pa-rs/pull/521))
+* Add region of interest assertion definition ([#506](https://github.com/contentauth/c2pa-rs/pull/506))
+* Fix CI tests ([#520](https://github.com/contentauth/c2pa-rs/pull/520))
+* Builder Archive update ([#507](https://github.com/contentauth/c2pa-rs/pull/507))
+* Update range-set requirement from 0.0.9 to 0.0.11 in /sdk ([#442](https://github.com/contentauth/c2pa-rs/pull/442))
+* Make sure reading past end of JUMBF box is an error ([#518](https://github.com/contentauth/c2pa-rs/pull/518))
+* added final details ([#517](https://github.com/contentauth/c2pa-rs/pull/517))
+
 ## 0.32.7
 _18 July 2024_
 

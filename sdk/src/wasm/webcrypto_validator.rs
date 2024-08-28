@@ -197,14 +197,9 @@ pub(crate) async fn async_validate(
 
             match result {
                 Ok(()) => {
-                    web_sys::console::debug_1(&"RSA validation success:".into());
                     Ok(true)
                 }
                 Err(err) => {
-                    web_sys::console::debug_2(
-                        &"RSA validation failed:".into(),
-                        &err.to_string().into(),
-                    );
                     Ok(false)
                 }
             }
@@ -251,14 +246,9 @@ pub(crate) async fn async_validate(
 
             match result {
                 Ok(()) => {
-                    web_sys::console::debug_1(&"RSA-PSS validation success:".into());
                     Ok(true)
                 }
                 Err(err) => {
-                    web_sys::console::debug_2(
-                        &"RSA-PSS validation failed:".into(),
-                        &err.to_string().into(),
-                    );
                     Ok(false)
                 }
             }

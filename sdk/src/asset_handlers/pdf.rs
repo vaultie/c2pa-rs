@@ -81,8 +81,8 @@ pub(crate) trait C2paPdf: Sized {
     fn write_manifest_as_annotation(&mut self, vec: Vec<u8>) -> Result<(), Error>;
 
     /// Returns a reference to the C2PA manifest bytes.
-    #[allow(clippy::needless_lifetimes)] // required for automock::mockall
-    fn read_manifest_bytes<'a>(&'a self) -> Result<Option<Vec<&'a [u8]>>, Error>;
+    #[allow(clippy::needless_lifetimes, clippy::type_complexity)] // required for automock::mockall
+    fn read_manifest_bytes<'a>(&'a self) -> Result<Option<Vec<(&'a [u8], usize)>>, Error>;
 
     fn remove_manifest_bytes(&mut self) -> Result<(), Error>;
 
@@ -206,15 +206,18 @@ impl C2paPdf for Pdf {
     /// This method will read the bytes of the manifest, whether the manifest was added to the
     /// PDF via an `Annotation` or an `EmbeddedFile`.
     ///
-    /// Returns an `Ok(None)` if no manifest is present. Returns a `Ok(Some(Vec<&[u8]>))` when a manifest
-    /// is present.
+    /// Returns an `Ok(None)` if no manifest is present. Returns a `Ok(Some(Vec<(&[u8], usize)>))` when a manifest
+    /// is present and the byte start position is present.
     ///
     /// ### Note:
     ///
-    /// A `Vec<&[u8]>` is returned because it's possible for a PDF's manifests to be stored
-    /// separately, due to PDF's "Incremental Update" feature. See the spec for more details:
+    /// A `Vec<(&[u8], usize)>` is returned because it's possible for a PDF's manifests to be stored
+    /// separately, due to PDF's "Incremental Update" feature. See the spec for more details:Add commentMore actions
     /// <https://c2pa.org/specifications/specifications/1.3/specs/C2PA_Specification.html#_embedding_manifests_into_pdfs>
-    fn read_manifest_bytes(&self) -> Result<Option<Vec<&[u8]>>, Error> {
+    ///
+    /// An `Ok(None)` value may be returned if the start position is not present. This situation
+    /// can occur when adding a manifest in-memory.
+    fn read_manifest_bytes(&self) -> Result<Option<Vec<(&[u8], usize)>>, Error> {
         let Some(id) = self.c2pa_file_spec_object_id() else {
             return Ok(None);
         };
@@ -226,18 +229,14 @@ impl C2paPdf for Pdf {
             .get_deref(b"EF", &self.document)?
             .as_dict()?; // EF dictionary
 
-        Ok(Some(vec![
-            &ef.get_deref(b"F", &self.document)? // F embedded file stream
-                .as_stream()?
-                .content,
-        ]))
+        Ok(ef
+            .get_deref(b"F", &self.document)? // F embedded file stream
+            .as_stream()
+            .ok()
+            .and_then(|stream| Some(vec![(&*stream.content, stream.start_position?)])))
     }
 
     fn remove_manifest_bytes(&mut self) -> Result<(), Error> {
-        if !self.has_c2pa_manifest() {
-            return Err(Error::NoManifest);
-        }
-
         // Find the File Spec, which contains the reference to the manifest.
         let file_spec_ref = self.c2pa_file_spec_object_id().ok_or(Error::NoManifest)?;
 
@@ -281,12 +280,12 @@ impl C2paPdf for Pdf {
                 let Ok(subtype_str) = stream_dict
                     .dict
                     .get_deref(SUBTYPE_KEY, &self.document)
-                    .and_then(Object::as_name_str)
+                    .and_then(Object::as_name)
                 else {
                     return None;
                 };
 
-                if subtype_str.to_lowercase() != "xml" {
+                if subtype_str.to_ascii_lowercase() != b"xml" {
                     return None;
                 }
 
@@ -478,8 +477,8 @@ impl Pdf {
                 .retain(|obj| {
                     obj.as_dict()
                         .and_then(|annot| annot.get(TYPE_KEY))
-                        .and_then(Object::as_name_str)
-                        .map(|str| str != CONTENT_CREDS)
+                        .and_then(Object::as_name)
+                        .map(|str| str != CONTENT_CREDS.as_bytes())
                         .unwrap_or(true)
                 });
         }
@@ -519,8 +518,8 @@ impl Pdf {
             .iter()
             .position(|value| {
                 value
-                    .as_string()
-                    .map(|value| value == CONTENT_CREDS)
+                    .as_str()
+                    .map(|value| value == CONTENT_CREDS.as_bytes())
                     .unwrap_or_default()
             })
             .ok_or(Error::UnableToFindEmbeddedFileManifest)?;
@@ -719,7 +718,7 @@ mod tests {
         assert!(pdf.has_c2pa_manifest());
         assert!(matches!(
             pdf.read_manifest_bytes(),
-            Ok(Some(manifests)) if manifests[0] == manifest_bytes
+            Ok(Some(manifests)) if manifests[0].0 == manifest_bytes
         ));
     }
 
@@ -739,7 +738,7 @@ mod tests {
         assert!(pdf.has_c2pa_manifest());
         assert!(matches!(
             pdf.read_manifest_bytes(),
-            Ok(Some(manifests)) if manifests[0] == manifest_bytes
+            Ok(Some(manifests)) if manifests[0].0 == manifest_bytes
         ));
     }
 

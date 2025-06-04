@@ -131,7 +131,6 @@ img-parts = "0.3.2"
 iref = { version = "3.2.2", features = ["serde"] }
 jfifdump = "0.6.0"
 log = "0.4.8"
-lopdf = { git = "https://github.com/vaultie/lopdf", branch = "new", default-features = false, optional = true }
 lazy_static = "1.4.0"
 memchr = "2.7.4"
 mp4 = "0.14.0"
@@ -178,6 +177,12 @@ x509-certificate = "0.24.0"
 x509-parser = "0.16.0"
 zeroize = { version = "1.8", features = ["zeroize_derive"] }
 zip = { version = "3.0.0", default-features = false }
+
+[dependencies.lopdf]
+git = "https://github.com/vaultie/lopdf"
+default-features = false
+features = ["pom_parser"]
+optional = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 const-oid = "0.9.6"

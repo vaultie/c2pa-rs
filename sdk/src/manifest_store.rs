@@ -172,10 +172,7 @@ impl ManifestStore {
         let store = &manifest_store.store;
         for claim in store.claims() {
             let manifest_label = claim.label();
-            #[cfg(feature = "file_io")]
             let result = Manifest::from_store(store, manifest_label, options);
-            #[cfg(not(feature = "file_io"))]
-            let result = Manifest::from_store(store, manifest_label);
 
             match result {
                 Ok(manifest) => {
@@ -209,10 +206,7 @@ impl ManifestStore {
         let store = &manifest_store.store;
         for claim in store.claims() {
             let manifest_label = claim.label();
-            #[cfg(feature = "file_io")]
             let result = Manifest::from_store_async(store, manifest_label, options).await;
-            #[cfg(not(feature = "file_io"))]
-            let result = Manifest::from_store_async(store, manifest_label).await;
 
             match result {
                 Ok(manifest) => {
@@ -239,12 +233,15 @@ impl ManifestStore {
     pub fn from_manifest(manifest: &Manifest) -> Result<Self> {
         use crate::status_tracker::{ErrorBehavior, StatusTracker};
         let store = manifest.to_store()?;
+
+        #[cfg(feature = "file_io")]
         let resource_path = manifest.resources().base_path().map(|p| p.to_path_buf());
 
         Ok(Self::from_store_impl(
             store,
             &StatusTracker::with_error_behavior(ErrorBehavior::StopOnFirstError),
             &mut StoreOptions {
+                #[cfg(feature = "file_io")]
                 resource_path,
                 ..Default::default()
             },

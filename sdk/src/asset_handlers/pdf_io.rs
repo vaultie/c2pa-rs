@@ -14,7 +14,7 @@
 use std::{fs::File, path::Path};
 
 use crate::{
-    asset_handlers::pdf::{C2paPdf, Pdf}, asset_io::{AssetIO, CAIRead, CAIReadWrite, CAIReader, CAIWriter, ComposedManifestRef, HashObjectPositions}, utils::patch::patch_bytes, Error::{self, JumbfNotFound, NotImplemented, PdfReadError}
+    asset_handlers::pdf::{C2paPdf, Pdf}, asset_io::{AssetIO, CAIRead, CAIReadWrite, CAIReader, CAIWriter, ComposedManifestRef, HashObjectPositions}, utils::{io_utils::stream_len, patch::patch_bytes}, Error::{self, JumbfNotFound, NotImplemented, PdfReadError}
 };
 
 static SUPPORTED_TYPES: [&str; 2] = ["pdf", "application/pdf"];
@@ -84,19 +84,33 @@ impl CAIWriter for PdfIO {
     ) -> crate::Result<Vec<HashObjectPositions>> {
         input_stream.rewind()?;
         let mut pdf =
-            Pdf::from_reader(input_stream).map_err(|e| Error::InvalidAsset(e.to_string()))?;
+            Pdf::from_reader(&mut *input_stream).map_err(|e| Error::InvalidAsset(e.to_string()))?;
 
         if let Some(manifests) = pdf
             .read_manifest_bytes()
             .map_err(|e| Error::InvalidAsset(e.to_string()))?
         {
             let (current_manifest, offset) = manifests.first().ok_or(Error::JumbfNotFound)?;
+            let current_manifest_len = current_manifest.len();
+            let current_manifest_end = current_manifest_len + offset;
 
-            Ok(vec![HashObjectPositions {
-                offset: *offset,
-                length: current_manifest.len(),
-                htype: crate::asset_io::HashBlockObjectType::Cai,
-            }])
+            Ok(vec![
+                HashObjectPositions {
+                    offset: 0,
+                    length: *offset,
+                    htype: crate::asset_io::HashBlockObjectType::Other,
+                },
+                HashObjectPositions {
+                    offset: *offset,
+                    length: current_manifest_len,
+                    htype: crate::asset_io::HashBlockObjectType::Cai,
+                },
+                HashObjectPositions {
+                    offset: current_manifest_end,
+                    length: usize::try_from(stream_len(input_stream)?)? - current_manifest_end,
+                    htype: crate::asset_io::HashBlockObjectType::Other,
+                },
+            ])
         } else {
             // Write a single byte as a placeholder manifest.
             pdf.write_manifest_as_embedded_file(vec![0])
@@ -113,12 +127,26 @@ impl CAIWriter for PdfIO {
                 .ok_or(Error::JumbfNotFound)?;
 
             let (current_manifest, offset) = manifests.first().ok_or(Error::JumbfNotFound)?;
+            let current_manifest_len = current_manifest.len();
+            let current_manifest_end = current_manifest_len + offset;
 
-            Ok(vec![HashObjectPositions {
-                offset: *offset,
-                length: current_manifest.len(),
-                htype: crate::asset_io::HashBlockObjectType::Cai,
-            }])
+            Ok(vec![
+                HashObjectPositions {
+                    offset: 0,
+                    length: *offset,
+                    htype: crate::asset_io::HashBlockObjectType::Other,
+                },
+                HashObjectPositions {
+                    offset: *offset,
+                    length: current_manifest_len,
+                    htype: crate::asset_io::HashBlockObjectType::Cai,
+                },
+                HashObjectPositions {
+                    offset: current_manifest_end,
+                    length: usize::try_from(stream_len(input_stream)?)? - current_manifest_end,
+                    htype: crate::asset_io::HashBlockObjectType::Other,
+                },
+            ])
         }
     }
 

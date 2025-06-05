@@ -36,8 +36,7 @@ use crate::{
     cose_validator::{get_signing_info, get_signing_info_async, verify_cose, verify_cose_async},
     crypto::{
         base64,
-        cose::{parse_cose_sign1, CertificateInfo, CertificateTrustPolicy, OcspFetchPolicy},
-        ocsp::OcspResponse,
+        cose::{CertificateInfo, CertificateTrustPolicy},
     },
     error::{Error, Result},
     hashed_uri::HashedUri,
@@ -55,7 +54,6 @@ use crate::{
     jumbf_io::get_assetio_handler,
     log_item,
     salt::{DefaultSalt, SaltGenerator, NO_SALT},
-    settings::get_settings_value,
     status_tracker::{ErrorBehavior, StatusTracker},
     utils::hash_utils::{hash_by_alg, vec_compare, verify_by_alg},
     validation_status, ClaimGeneratorInfo,
@@ -1771,47 +1769,6 @@ impl Claim {
             .failure(validation_log, Error::ClaimMissingSignatureBox)?;
         }
 
-        // check certificate revocation
-        let sign1 = parse_cose_sign1(&sig, &data, validation_log).inspect_err(|_e| {
-            // adjust the error info
-            if let Some(li) = validation_log.logged_items_mut().last_mut() {
-                let mut new_li = li.clone();
-                new_li.label = Cow::from(claim.uri());
-                *li = new_li;
-            }
-        })?;
-        check_ocsp_status(&sign1, &data, ctp, validation_log)
-            .map(|v| {
-                // if a value contains the der response it has successfully returned a good OCSP response
-                if !v.ocsp_der.is_empty() {
-                    // so log the success status
-                    if v.revoked_at.is_none() {
-                        log_item!(
-                            claim.uri(),
-                            "claim signature OCSP value good",
-                            "verify_internal"
-                        )
-                        .validation_status(validation_status::SIGNING_CREDENTIAL_NOT_REVOKED)
-                        .success(validation_log);
-                    } else {
-                        // adjust the error info
-                        if let Some(li) = validation_log.logged_items_mut().last_mut() {
-                            let mut new_li = li.clone();
-                            new_li.label = Cow::from(claim.uri());
-                            *li = new_li;
-                        }
-                    }
-                }
-            })
-            .inspect_err(|_e| {
-                // adjust the error info
-                if let Some(li) = validation_log.logged_items_mut().last_mut() {
-                    let mut new_li = li.clone();
-                    new_li.label = Cow::from(claim.uri());
-                    *li = new_li;
-                }
-            })?;
-
         let verified = verify_cose_async(
             &sig,
             &data,
@@ -1863,47 +1820,6 @@ impl Claim {
         } else {
             return Err(Error::ClaimDecoding);
         };
-
-        // check certificate revocation
-        let sign1 = parse_cose_sign1(sig, data, validation_log).inspect_err(|_e| {
-            // adjust the error info
-            if let Some(li) = validation_log.logged_items_mut().last_mut() {
-                let mut new_li = li.clone();
-                new_li.label = Cow::from(claim.uri());
-                *li = new_li;
-            }
-        })?;
-        check_ocsp_status(&sign1, data, ctp, validation_log)
-            .map(|v| {
-                // if a value contains the der response it has successfully returned a good OCSP response
-                if !v.ocsp_der.is_empty() {
-                    // so log the success status
-                    if v.revoked_at.is_none() {
-                        log_item!(
-                            claim.uri(),
-                            "claim signature OCSP value good",
-                            "verify_internal"
-                        )
-                        .validation_status(validation_status::SIGNING_CREDENTIAL_NOT_REVOKED)
-                        .success(validation_log);
-                    } else {
-                        // adjust the error info
-                        if let Some(li) = validation_log.logged_items_mut().last_mut() {
-                            let mut new_li = li.clone();
-                            new_li.label = Cow::from(claim.uri());
-                            *li = new_li;
-                        }
-                    }
-                }
-            })
-            .inspect_err(|_e| {
-                // adjust the error info
-                if let Some(li) = validation_log.logged_items_mut().last_mut() {
-                    let mut new_li = li.clone();
-                    new_li.label = Cow::from(claim.uri());
-                    *li = new_li;
-                }
-            })?;
 
         let verified = verify_cose(
             sig,
@@ -2861,41 +2777,6 @@ impl Claim {
         } else {
             uri
         }
-    }
-}
-
-#[allow(dead_code)]
-#[async_generic]
-pub(crate) fn check_ocsp_status(
-    sign1: &coset::CoseSign1,
-    data: &[u8],
-    ctp: &CertificateTrustPolicy,
-    validation_log: &mut StatusTracker,
-) -> Result<OcspResponse> {
-    // Moved here instead of c2pa-crypto because of the dependency on settings.
-
-    let fetch_policy = match get_settings_value::<bool>("verify.ocsp_fetch") {
-        Ok(true) => OcspFetchPolicy::FetchAllowed,
-        _ => OcspFetchPolicy::DoNotFetch,
-    };
-
-    if _sync {
-        Ok(crate::crypto::cose::check_ocsp_status(
-            sign1,
-            data,
-            fetch_policy,
-            ctp,
-            validation_log,
-        )?)
-    } else {
-        Ok(crate::crypto::cose::check_ocsp_status_async(
-            sign1,
-            data,
-            fetch_policy,
-            ctp,
-            validation_log,
-        )
-        .await?)
     }
 }
 

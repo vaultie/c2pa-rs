@@ -53,16 +53,6 @@ pub trait TimeStampProvider {
     /// todo: THIS CODE IS NOT COMPATIBLE WITH C2PA 2.x sigTst2
     #[allow(unused_variables)] // `message` not used on WASM
     fn send_time_stamp_request(&self, message: &[u8]) -> Option<Result<Vec<u8>, TimeStampError>> {
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(url) = self.time_stamp_service_url() {
-            if let Ok(body) = self.time_stamp_request_body(message) {
-                let headers: Option<Vec<(String, String)>> = self.time_stamp_request_headers();
-                return Some(super::http_request::default_rfc3161_request(
-                    &url, headers, &body, message,
-                ));
-            }
-        }
-
         None
     }
 }
@@ -113,21 +103,6 @@ pub trait AsyncTimeStampProvider: Sync {
         &self,
         message: &[u8],
     ) -> Option<Result<Vec<u8>, TimeStampError>> {
-        // NOTE: This is currently synchronous, but may become
-        // async in the future.
-        #[cfg(not(target_arch = "wasm32"))]
-        if let Some(url) = self.time_stamp_service_url() {
-            if let Ok(body) = self.time_stamp_request_body(message) {
-                let headers: Option<Vec<(String, String)>> = self.time_stamp_request_headers();
-                return Some(
-                    super::http_request::default_rfc3161_request_async(
-                        &url, headers, &body, message,
-                    )
-                    .await,
-                );
-            }
-        }
-
         None
     }
 }

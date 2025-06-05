@@ -32,62 +32,6 @@ impl std::ops::Deref for TimeStampResponse {
     }
 }
 
-impl TimeStampResponse {
-    /// Return `true` if the request was successful.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn is_success(&self) -> bool {
-        use crate::crypto::asn1::rfc3161::PkiStatus;
-
-        matches!(
-            self.0.status.status,
-            PkiStatus::Granted | PkiStatus::GrantedWithMods
-        )
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn signed_data(&self) -> Result<Option<SignedData>, TimeStampError> {
-        if let Some(token) = &self.0.time_stamp_token {
-            if token.content_type == OID_ID_SIGNED_DATA {
-                Ok(Some(
-                    token
-                        .content
-                        .clone()
-                        .decode(SignedData::take_from)
-                        .map_err(|e| TimeStampError::DecodeError(e.to_string()))?,
-                ))
-            } else {
-                Err(TimeStampError::DecodeError(
-                    "Invalid OID for signed data".to_string(),
-                ))
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn tst_info(&self) -> Result<Option<TstInfo>, TimeStampError> {
-        if let Some(signed_data) = self.signed_data()? {
-            if signed_data.content_info.content_type == OID_CONTENT_TYPE_TST_INFO {
-                if let Some(content) = signed_data.content_info.content {
-                    Ok(Some(
-                        Constructed::decode(content.to_bytes(), bcder::Mode::Der, |cons| {
-                            TstInfo::take_from(cons)
-                        })
-                        .map_err(|e| TimeStampError::DecodeError(e.to_string()))?,
-                    ))
-                } else {
-                    Ok(None)
-                }
-            } else {
-                Ok(None)
-            }
-        } else {
-            Ok(None)
-        }
-    }
-}
-
 #[derive(AsnType, Clone, Debug, Decode, Encode, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) struct ContentInfo {
     pub(crate) content_type: rasn::types::ObjectIdentifier,

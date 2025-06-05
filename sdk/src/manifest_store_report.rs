@@ -109,23 +109,6 @@ impl ManifestStoreReport {
         Ok(())
     }
 
-    /// Prints the certificate chain used to sign the active manifest.
-    #[cfg(feature = "file_io")]
-    #[cfg(feature = "v1_api")]
-    pub fn dump_cert_chain<P: AsRef<Path>>(path: P) -> Result<()> {
-        let mut validation_log = StatusTracker::default();
-        let store = Store::load_from_asset(path.as_ref(), true, &mut validation_log)?;
-
-        let cert_str = store.get_provenance_cert_chain()?;
-        println!("{cert_str}\n\n");
-
-        if let Some(ocsp_info) = store.get_ocsp_status() {
-            println!("{ocsp_info}");
-        }
-
-        Ok(())
-    }
-
     /// Returns the certificate chain used to sign the active manifest.
     #[cfg(feature = "file_io")]
     #[cfg(feature = "v1_api")]

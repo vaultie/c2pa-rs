@@ -18,11 +18,6 @@
 mod error;
 pub use error::TimeStampError;
 
-#[cfg(not(target_arch = "wasm32"))]
-mod http_request;
-#[cfg(not(target_arch = "wasm32"))]
-pub use http_request::{default_rfc3161_request, default_rfc3161_request_async};
-
 mod provider;
 pub use provider::{default_rfc3161_message, AsyncTimeStampProvider, TimeStampProvider};
 

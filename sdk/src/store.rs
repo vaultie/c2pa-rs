@@ -46,14 +46,11 @@ use crate::{
     asset_io::{
         CAIRead, CAIReadWrite, HashBlockObjectType, HashObjectPositions, RemoteRefEmbedType,
     },
-    claim::{
-        check_ocsp_status, Claim, ClaimAssertion, ClaimAssertionType, ClaimAssetData,
-        RemoteManifest,
-    },
+    claim::{Claim, ClaimAssertion, ClaimAssertionType, ClaimAssetData, RemoteManifest},
     cose_sign::{cose_sign, cose_sign_async},
     cose_validator::{verify_cose, verify_cose_async},
     crypto::{
-        cose::{parse_cose_sign1, CertificateTrustPolicy, TimeStampStorage},
+        cose::{CertificateTrustPolicy, TimeStampStorage},
         hash::sha256,
     },
     dynamic_assertion::{
@@ -396,7 +393,7 @@ impl Store {
     }
 
     /// Returns an Assertion referenced by JUMBF URI.  The URI should be absolute and include
-    /// the desired Claim in the path. If you need to specify the Claim for this URI use  
+    /// the desired Claim in the path. If you need to specify the Claim for this URI use
     /// get_assertion_from_uri_and_claim.
     /// uri - The JUMBF URI for desired Assertion.
     pub fn get_assertion_from_uri(&self, uri: &str) -> Option<&Assertion> {
@@ -465,39 +462,6 @@ impl Store {
         match claim.get_cert_chain() {
             Ok(chain) => String::from_utf8(chain).map_err(|_e| Error::CoseInvalidCert),
             Err(e) => Err(e),
-        }
-    }
-
-    /// Return OCSP info if available
-    // Currently only called from manifest_store behind a feature flag but this is allowable
-    // anywhere so allow dead code here for future uses to compile
-    #[allow(dead_code)]
-    pub(crate) fn get_ocsp_status(&self) -> Option<String> {
-        let claim = self
-            .provenance_claim()
-            .ok_or(Error::ProvenanceMissing)
-            .ok()?;
-
-        let sig = claim.signature_val();
-        let data = claim.data().ok()?;
-        let mut validation_log =
-            StatusTracker::with_error_behavior(ErrorBehavior::StopOnFirstError);
-
-        let sign1 = parse_cose_sign1(sig, &data, &mut validation_log).ok()?;
-        if let Ok(info) = check_ocsp_status(&sign1, &data, &self.ctp, &mut validation_log) {
-            if let Some(revoked_at) = &info.revoked_at {
-                Some(format!(
-                    "Certificate Status: Revoked, revoked at: {}",
-                    revoked_at
-                ))
-            } else {
-                Some(format!(
-                    "Certificate Status: Good, next update: {}",
-                    info.next_update
-                ))
-            }
-        } else {
-            None
         }
     }
 
@@ -1489,7 +1453,7 @@ impl Store {
     /// store: Store to validate
     /// xmp_str: String containing entire XMP block of the asset
     /// asset_bytes: bytes of the asset to be verified
-    /// validation_log: If present all found errors are logged and returned, other wise first error causes exit and is returned  
+    /// validation_log: If present all found errors are logged and returned, other wise first error causes exit and is returned
     pub async fn verify_store_async(
         store: &Store,
         asset_data: &mut ClaimAssetData<'_>,
@@ -1519,7 +1483,7 @@ impl Store {
     /// store: Store to validate
     /// xmp_str: String containing entire XMP block of the asset
     /// asset_bytes: bytes of the asset to be verified
-    /// validation_log: If present all found errors are logged and returned, other wise first error causes exit and is returned  
+    /// validation_log: If present all found errors are logged and returned, other wise first error causes exit and is returned
     pub fn verify_store(
         store: &Store,
         asset_data: &mut ClaimAssetData<'_>,
@@ -1870,10 +1834,10 @@ impl Store {
     /// BMFF hash binding.  If a BMFF data hash or box hash is detected that is
     /// an error.  The DataHash placeholder assertion will be  adjusted to the contain
     /// the correct values.  If the asset_reader value is supplied it will also perform
-    /// the hash calculations, otherwise the function uses the caller supplied values.  
+    /// the hash calculations, otherwise the function uses the caller supplied values.
     /// It is an error if `get_data_hashed_manifest_placeholder` was not called first
     /// as this call inserts the DataHash placeholder assertion to reserve space for the
-    /// actual hash values not required when using BoxHashes.  
+    /// actual hash values not required when using BoxHashes.
     pub fn get_data_hashed_embeddable_manifest(
         &mut self,
         dh: &DataHash,
@@ -1900,10 +1864,10 @@ impl Store {
     /// BMFF hash binding.  If a BMFF data hash or box hash is detected that is
     /// an error.  The DataHash placeholder assertion will be  adjusted to the contain
     /// the correct values.  If the asset_reader value is supplied it will also perform
-    /// the hash calculations, otherwise the function uses the caller supplied values.  
+    /// the hash calculations, otherwise the function uses the caller supplied values.
     /// It is an error if `get_data_hashed_manifest_placeholder` was not called first
     /// as this call inserts the DataHash placeholder assertion to reserve space for the
-    /// actual hash values not required when using BoxHashes.  
+    /// actual hash values not required when using BoxHashes.
     pub async fn get_data_hashed_embeddable_manifest_async(
         &mut self,
         dh: &DataHash,
@@ -1932,10 +1896,10 @@ impl Store {
     /// BMFF hash binding.  If a BMFF data hash or box hash is detected that is
     /// an error.  The DataHash placeholder assertion will be  adjusted to the contain
     /// the correct values.  If the asset_reader value is supplied it will also perform
-    /// the hash calculations, otherwise the function uses the caller supplied values.  
+    /// the hash calculations, otherwise the function uses the caller supplied values.
     /// It is an error if `get_data_hashed_manifest_placeholder` was not called first
     /// as this call inserts the DataHash placeholder assertion to reserve space for the
-    /// actual hash values not required when using BoxHashes.  
+    /// actual hash values not required when using BoxHashes.
     #[cfg(feature = "v1_api")]
     pub async fn get_data_hashed_embeddable_manifest_remote(
         &mut self,
@@ -2030,7 +1994,7 @@ impl Store {
 
     /// Returns the supplied manifest composed to be directly compatible with the desired format.
     /// For example, if format is JPEG function will return the set of APP11 segments that contains
-    /// the manifest.  Similarly for PNG it would be the PNG chunk complete with header and  CRC.   
+    /// the manifest.  Similarly for PNG it would be the PNG chunk complete with header and  CRC.
     pub fn get_composed_manifest(manifest_bytes: &[u8], format: &str) -> Result<Vec<u8>> {
         if let Some(h) = get_assetio_handler(format) {
             if let Some(composed_data_handler) = h.composed_data_ref() {
@@ -2418,7 +2382,7 @@ impl Store {
     /// in the 'get_placed_manifest_call'.  Changes to the following assertions are disallowed
     /// when using 'ManifestPatchCallback':  ["c2pa.hash.data",  "c2pa.hash.boxes",  "c2pa.hash.bmff",
     ///  "c2pa.actions",  "c2pa.ingredient"].  Also the set of assertions cannot be changed, only the
-    /// content of allowed assertions can be modified.  
+    /// content of allowed assertions can be modified.
     /// 'format' shoould match the type of the input stream..
     /// Upon return, the output stream will contain the new manifest signed with signer
     /// This directly modifies the asset in stream, backup stream first if you need to preserve it.
@@ -3247,7 +3211,7 @@ impl Store {
 
     /// Verify Store from an existing asset
     /// asset_path: path to input asset
-    /// validation_log: If present all found errors are logged and returned, otherwise first error causes exit and is returned  
+    /// validation_log: If present all found errors are logged and returned, otherwise first error causes exit and is returned
     #[cfg(feature = "file_io")]
     pub fn verify_from_path(
         &mut self,
@@ -3514,7 +3478,7 @@ impl Store {
     /// Load Store from claims in an existing asset
     /// asset_path: path to input asset
     /// verify: determines whether to verify the contents of the provenance claim.  Must be set true to use validation_log
-    /// validation_log: If present all found errors are logged and returned, otherwise first error causes exit and is returned  
+    /// validation_log: If present all found errors are logged and returned, otherwise first error causes exit and is returned
     #[cfg(all(feature = "v1_api", feature = "file_io"))]
     pub fn load_from_asset(
         asset_path: &Path,

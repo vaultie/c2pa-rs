@@ -18,7 +18,5 @@ pub(crate) mod base64;
 pub mod cose;
 pub(crate) mod ec_utils;
 pub(crate) mod hash;
-pub(crate) mod internal;
-pub mod ocsp;
 pub mod raw_signature;
 pub mod time_stamp;

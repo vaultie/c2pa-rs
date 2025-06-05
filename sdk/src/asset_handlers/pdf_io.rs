@@ -14,7 +14,13 @@
 use std::{fs::File, path::Path};
 
 use crate::{
-    asset_handlers::pdf::{C2paPdf, Pdf}, asset_io::{AssetIO, CAIRead, CAIReadWrite, CAIReader, CAIWriter, ComposedManifestRef, HashObjectPositions}, utils::{io_utils::stream_len, patch::patch_bytes}, Error::{self, JumbfNotFound, NotImplemented, PdfReadError}
+    asset_handlers::pdf::{C2paPdf, Pdf},
+    asset_io::{
+        AssetIO, CAIRead, CAIReadWrite, CAIReader, CAIWriter, ComposedManifestRef,
+        HashObjectPositions,
+    },
+    utils::{io_utils::stream_len, patch::patch_bytes},
+    Error::{self, JumbfNotFound, NotImplemented, PdfReadError},
 };
 
 static SUPPORTED_TYPES: [&str; 2] = ["pdf", "application/pdf"];

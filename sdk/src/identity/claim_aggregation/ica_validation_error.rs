@@ -13,10 +13,7 @@
 
 use std::fmt::Debug;
 
-use crate::identity::{
-    claim_aggregation::w3c_vc::{did::InvalidDid, did_web::DidWebError},
-    ValidationError,
-};
+use crate::identity::{claim_aggregation::w3c_vc::did::InvalidDid, ValidationError};
 
 /// Describes the ways in which a CAWG identity claims aggregation credential
 /// can fail validation.
@@ -111,14 +108,5 @@ impl From<serde_json::Error> for ValidationError<IcaValidationError> {
 impl From<InvalidDid> for ValidationError<IcaValidationError> {
     fn from(err: InvalidDid) -> Self {
         Self::SignatureError(IcaValidationError::UnsupportedIssuerDid(err.to_string()))
-    }
-}
-
-impl From<DidWebError> for ValidationError<IcaValidationError> {
-    fn from(err: DidWebError) -> Self {
-        match err {
-            DidWebError::Client(_) => Self::InternalError(err.to_string()),
-            _ => Self::SignatureError(IcaValidationError::DidResolutionError(err.to_string())),
-        }
     }
 }

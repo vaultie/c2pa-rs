@@ -1460,10 +1460,7 @@ impl Claim {
         let vc: Value =
             serde_json::from_str(vc_json).map_err(|_err| Error::VerifiableCredentialInvalid)?; // check for json validity
 
-        let credential_subject = vc
-            .get("credentialSubject")
-            .ok_or(Error::VerifiableCredentialInvalid)?;
-        let id = credential_subject
+        let id = vc
             .get("id")
             .ok_or(Error::VerifiableCredentialInvalid)?
             .as_str()

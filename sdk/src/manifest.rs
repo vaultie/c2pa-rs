@@ -194,6 +194,11 @@ impl Manifest {
         self.title.as_deref()
     }
 
+    /// Returns a vendor identifier for this manifest
+    pub fn vendor(&self) -> Option<&str> {
+        self.vendor.as_deref()
+    }
+
     /// Returns thumbnail tuple with Some((format, bytes)) or None
     pub fn thumbnail(&self) -> Option<(&str, Cow<Vec<u8>>)> {
         self.thumbnail
@@ -1481,7 +1486,7 @@ impl Manifest {
     /// specifies the format of the asset. The input_stream should point to the same asset
     /// used in get_placed_manifest.  The caller can supply list of ManifestPathCallback
     /// traits to make any modifications to assertions.  The callbacks are processed before
-    /// the manifest is signed.  
+    /// the manifest is signed.
     #[deprecated(since = "0.38.0", note = "use Builder.sign with dynamic assertions.")]
     #[cfg(feature = "v1_api")]
     pub fn embed_placed_manifest(
